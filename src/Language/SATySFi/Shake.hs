@@ -16,11 +16,12 @@ module Language.SATySFi.Shake (
 ) where
 
 import Control.Applicative ((<**>))
+import Data.ByteString qualified as BS
 import Data.Functor (void)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
+import Data.Text.Encoding qualified as TE
 import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath qualified as Shake
@@ -69,7 +70,7 @@ type instance RuleResult SearchIn = ()
 readFileText' :: (HasCallStack) => Path r File -> Action T.Text
 readFileText' fp = do
   need [toFilePath fp]
-  liftIO . T.readFile . toFilePath $ fp
+  liftIO . fmap TE.decodeUtf8 . BS.readFile . toFilePath $ fp
 
 satysfiRules :: (HasCallStack) => Rules ()
 satysfiRules = do
