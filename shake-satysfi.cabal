@@ -1,6 +1,6 @@
 cabal-version: 3.4
 name: shake-satysfi
-version: 0.1.0.0
+version: 0.1.0.1
 description: Please see the README on GitHub at <https://github.com/konn/shake-satysfi#readme>
 homepage: https://github.com/konn/shake-satysfi#readme
 bug-reports: https://github.com/konn/shake-satysfi/issues
