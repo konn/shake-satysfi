@@ -21,7 +21,6 @@ source-repository head
 common defaults
   autogen-modules: Paths_shake_satysfi
   other-modules: Paths_shake_satysfi
-  build-tool-depends: cabal-gild:cabal-gild
   ghc-options:
     -Wall
     -Wcompat
