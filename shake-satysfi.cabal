@@ -63,6 +63,11 @@ executable shake-satysfi
   -- cabal-gild: discover app --exclude=app/Main.hs
   other-modules:
   build-depends: shake-satysfi
+  ghc-options:
+    -O2
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
 test-suite shake-satysfi-test
   import: defaults
@@ -72,16 +77,7 @@ test-suite shake-satysfi-test
   -- cabal-gild: discover test --exclude=test/Spec.hs
   other-modules:
   ghc-options:
-    -Wall
-    -Wcompat
-    -Widentities
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wmissing-export-lists
-    -Wmissing-home-modules
-    -Wpartial-fields
-    -Wredundant-constraints
-    -Wunused-packages
+    -O2
     -threaded
     -rtsopts
     -with-rtsopts=-N
