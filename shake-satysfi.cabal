@@ -40,12 +40,8 @@ common defaults
 library
   import: defaults
   build-depends:
-    algebraic-graphs,
-    bytestring,
-    containers,
     megaparsec,
     optparse-applicative,
-    parser-combinators,
     path,
     path-io,
     shake,
