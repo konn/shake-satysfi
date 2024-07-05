@@ -77,8 +77,11 @@ satysfiRules = do
     putInfo $ "Genearting: " <> out
     let fp = out Shake.-<.> ".saty"
     absFP <- resolveFile' fp
+    putInfo $ "Resolved: " <> fromAbsFile absFP
     src <- readFileText' absFP
+    putInfo "Parsing headers..."
     hdrs <- either error pure . parseHeaders $ src
+    putInfo "Traversing dependencies"
     void $ askOracles $ SearchIn (parent absFP) <$> hdrs
     cmd_ "satysfi" fp
 
