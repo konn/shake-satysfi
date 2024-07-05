@@ -16,10 +16,13 @@ module Language.SATySFi.Shake (
 ) where
 
 import Control.Applicative ((<**>))
+import Control.Applicative.Combinators.NonEmpty qualified as OptsNE
 import Data.ByteString qualified as BS
-import Data.Functor (void)
+import Data.Functor (void, (<&>))
+import Data.List qualified as L
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.List.NonEmpty qualified as NE
+import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Development.Shake
@@ -32,7 +35,7 @@ import Options.Applicative qualified as Opts
 import Path
 import Path.IO (getHomeDir, resolveFile')
 
-newtype Options = Options {target :: FilePath}
+newtype Options = Options {targets :: NonEmpty FilePath}
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable, Binary)
 
@@ -47,17 +50,20 @@ optionsP =
     (parser <**> Opts.helper)
     (Opts.fullDesc <> Opts.progDesc "Build SATySFi project")
   where
-    parser = Options <$> Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build")
+    parser = Options <$> OptsNE.some (Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build"))
 
 defaultMainWith :: (HasCallStack) => Options -> IO ()
 defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest} $ do
   satysfiRules
-  let target = case Shake.takeExtension opts.target of
-        ".pdf" -> opts.target
-        ".saty" -> opts.target Shake.-<.> "pdf"
-        _ -> opts.target Shake.<.> "pdf"
-  liftIO $ putStrLn $ "Needing: " <> target
-  want [target]
+  let targets =
+        opts.targets <&> \targ0 ->
+          (fromMaybe <$> id <*> L.stripPrefix "./") $
+            case Shake.takeExtension targ0 of
+              ".pdf" -> targ0
+              ".saty" -> targ0 Shake.-<.> "pdf"
+              _ -> targ0 Shake.<.> "pdf"
+  liftIO $ putStrLn $ "Needing: " <> show (NE.toList targets)
+  want $ NE.toList targets
 
 data SearchIn = SearchIn (Path Abs Dir) HeaderDecl
   deriving (Show, Eq, Ord, Generic)
