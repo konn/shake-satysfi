@@ -1,0 +1,93 @@
+cabal-version: 3.4
+name: shake-satysfi
+version: 0.1.0.0
+description: Please see the README on GitHub at <https://github.com/konn/shake-satysfi#readme>
+homepage: https://github.com/konn/shake-satysfi#readme
+bug-reports: https://github.com/konn/shake-satysfi/issues
+author: Hiromi ISHII
+maintainer: konn.jinro_at_gmail.com
+copyright: 2024 (c) Hiromi ISHII
+license: BSD-3-Clause
+license-file: LICENSE
+build-type: Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type: git
+  location: https://github.com/konn/shake-satysfi
+
+common defaults
+  autogen-modules: Paths_shake_satysfi
+  other-modules: Paths_shake_satysfi
+  build-tool-depends: cabal-gild:cabal-gild
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wmissing-export-lists
+    -Wmissing-home-modules
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+  default-language: GHC2021
+  build-depends: base >=4.7 && <5
+
+library
+  import: defaults
+  build-depends:
+    algebraic-graphs,
+    bytestring,
+    containers,
+    megaparsec,
+    optparse-applicative,
+    parser-combinators,
+    path,
+    path-io,
+    shake,
+    text,
+
+  hs-source-dirs: src
+  -- cabal-gild: discover src --exclude=**/Internal.hs
+  exposed-modules:
+    Language.SATySFi.Shake
+    Language.SATySFi.Syntax.Header
+
+  -- cabal-gild: discover src --include=**/Internal.hs
+  other-modules:
+
+executable shake-satysfi
+  import: defaults
+  main-is: Main.hs
+  hs-source-dirs: app
+  -- cabal-gild: discover app --exclude=app/Main.hs
+  other-modules:
+  build-depends: shake-satysfi
+
+test-suite shake-satysfi-test
+  import: defaults
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Spec.hs
+  -- cabal-gild: discover test --exclude=test/Spec.hs
+  other-modules:
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wmissing-export-lists
+    -Wmissing-home-modules
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends: shake-satysfi

@@ -1,0 +1,11 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "cmd": "cabal-gild --io shake-satysfi.cabal",
+        "isAsync": true,
+        "match": "\\.(hsig|l?hs)$"
+      }
+    ]
+  }
+}
