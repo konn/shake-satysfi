@@ -1,9 +1,11 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -16,7 +18,6 @@ module Language.SATySFi.Shake (
 ) where
 
 import Control.Applicative ((<**>))
-import Control.Applicative.Combinators.NonEmpty qualified as OptsNE
 import Data.ByteString qualified as BS
 import Data.Functor (void, (<&>))
 import Data.List qualified as L
@@ -50,7 +51,9 @@ optionsP =
     (parser <**> Opts.helper)
     (Opts.fullDesc <> Opts.progDesc "Build SATySFi project")
   where
-    parser = Options <$> OptsNE.some (Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build"))
+    parser = do
+      targets <- NE.fromList <$> Opts.some (Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build"))
+      pure Options {..}
 
 defaultMainWith :: (HasCallStack) => Options -> IO ()
 defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest} $ do
