@@ -25,6 +25,7 @@ import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath qualified as Shake
 import GHC.Generics
+import GHC.Stack (HasCallStack)
 import Language.SATySFi.Syntax.Header (HeaderDecl (..), Module (..), parseHeaders)
 import Options.Applicative qualified as Opts
 import Path
@@ -47,7 +48,7 @@ optionsP =
   where
     parser = Options <$> Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build")
 
-defaultMainWith :: Options -> IO ()
+defaultMainWith :: (HasCallStack) => Options -> IO ()
 defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest} $ do
   satysfiRules
   let target = case Shake.takeExtension opts.target of
@@ -65,19 +66,19 @@ deriving anyclass instance Binary (Path Abs Dir)
 
 type instance RuleResult SearchIn = ()
 
-readFileText' :: Path r File -> Action T.Text
+readFileText' :: (HasCallStack) => Path r File -> Action T.Text
 readFileText' fp = do
   need [toFilePath fp]
   liftIO . T.readFile . toFilePath $ fp
 
-satysfiRules :: Rules ()
+satysfiRules :: (HasCallStack) => Rules ()
 satysfiRules = do
   "//*.pdf" %> \out -> do
     putInfo $ "Genearting: " <> out
     let fp = out Shake.-<.> ".saty"
     absFP <- resolveFile' fp
     src <- readFileText' absFP
-    hdrs <- either fail pure . parseHeaders $ src
+    hdrs <- either error pure . parseHeaders $ src
     void $ askOracles $ SearchIn (parent absFP) <$> hdrs
     cmd_ "satysfi" fp
 
@@ -86,13 +87,13 @@ satysfiRules = do
       putInfo $ "Requiring: " <> T.unpack fp.moduleName
       pkg <- findPackage cwd fp.moduleName
       src <- readFileText' pkg
-      hdrs <- either fail pure . parseHeaders $ src
+      hdrs <- either error pure . parseHeaders $ src
       void $ askOracles $ SearchIn (parent pkg) <$> hdrs
     SearchIn cwd (Import fp) -> do
       putInfo $ "Importing: " <> T.unpack fp.moduleName
       pkg <- findLocalPackage cwd fp.moduleName
       src <- readFileText' pkg
-      hdrs <- either fail pure . parseHeaders $ src
+      hdrs <- either error pure . parseHeaders $ src
       void $ askOracles $ SearchIn (parent pkg) <$> hdrs
 
 findM :: (Monad m) => (a -> m Bool) -> [a] -> m (Maybe a)
@@ -109,7 +110,7 @@ findPackage cwd targ = do
 findLocalPackage :: Path Abs Dir -> T.Text -> Action (Path Abs File)
 findLocalPackage cwd = findPackage' (NE.singleton cwd)
 
-findPackage' :: NonEmpty (Path Abs Dir) -> T.Text -> Action (Path Abs File)
+findPackage' :: (HasCallStack) => NonEmpty (Path Abs Dir) -> T.Text -> Action (Path Abs File)
 findPackage' (sd :| rest) targ = do
   candidates <-
     if Shake.isAbsolute $ T.unpack targ
@@ -126,7 +127,7 @@ findPackage' (sd :| rest) targ = do
           $ sd : rest
   mtarg <- findM doesFileExist candidates
   maybe
-    ( fail $
+    ( error $
         unlines $
           "Package not found: " <> T.unpack targ
             : "Candidates:"
