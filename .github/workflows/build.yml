@@ -88,5 +88,5 @@ jobs:
         TARBALL=shake-satysfi-${{github.ref_name}}-x86_64-linux.tar.gz
         tar czvf "${TARBALL}" shake-satysfi
         sha256sum "${TARBALL}" >SHA256SUMS
-        gh release create --draft -F ${{github.workspace}}/shake-satysfi/CHANGELOG.md -t "${{github.ref_name}}" "${{github.ref_name}}" "${TARBALL}" SHA256SUMS
+        gh release create --draft -F ${{github.workspace}}/CHANGELOG.md -t "${{github.ref_name}}" "${{github.ref_name}}" "${TARBALL}" SHA256SUMS
 
