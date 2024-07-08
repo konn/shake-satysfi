@@ -18,6 +18,7 @@ module Language.SATySFi.Shake (
 ) where
 
 import Control.Applicative ((<**>))
+import Control.Exception (Exception (..))
 import Data.ByteString qualified as BS
 import Data.Functor (void, (<&>))
 import Data.List qualified as L
@@ -34,9 +35,13 @@ import GHC.Stack (HasCallStack)
 import Language.SATySFi.Syntax.Header (HeaderDecl (..), Module (..), parseHeaders)
 import Options.Applicative qualified as Opts
 import Path
-import Path.IO (getHomeDir, resolveFile')
+import Path qualified as P
+import Path.IO (getHomeDir, makeAbsolute, resolveFile')
 
-newtype Options = Options {targets :: NonEmpty FilePath}
+data Options = Options
+  { targets :: !(NonEmpty FilePath)
+  , baseDir :: !(Maybe FilePath)
+  }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable, Binary)
 
@@ -53,6 +58,14 @@ optionsP =
   where
     parser = do
       targets <- NE.fromList <$> Opts.some (Opts.strArgument (Opts.metavar "TARGET" <> Opts.help "Target SATySFi document to build"))
+      baseDir <-
+        Opts.optional $
+          Opts.strOption $
+            Opts.short 'o'
+              <> Opts.long "outdir"
+              <> Opts.metavar "DIR"
+              <> Opts.help "the directory to put the output files in"
+
       pure Options {..}
 
 defaultMainWith :: (HasCallStack) => Options -> IO ()
@@ -68,13 +81,15 @@ defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest} $ do
   liftIO $ putStrLn $ "Needing: " <> show (NE.toList targets)
   want $ NE.toList targets
 
-data SearchIn = SearchIn (Path Abs Dir) HeaderDecl
+deriving anyclass instance Binary (Path r b)
+
+data ModCmd
+  = Req (Path Abs File)
+  | Imp (Path Abs File)
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable, Binary)
 
-deriving anyclass instance Binary (Path Abs Dir)
-
-type instance RuleResult SearchIn = ()
+type instance RuleResult ModCmd = ()
 
 readFileText' :: (HasCallStack) => Path r File -> Action T.Text
 readFileText' fp = do
@@ -83,31 +98,52 @@ readFileText' fp = do
 
 satysfiRules :: (HasCallStack) => Rules ()
 satysfiRules = do
-  "//*.pdf" %> \out -> do
-    putInfo $ "Genearting: " <> out
-    let fp = out Shake.-<.> ".saty"
-    absFP <- resolveFile' fp
-    putInfo $ "Resolved: " <> fromAbsFile absFP
-    src <- readFileText' absFP
-    putInfo "Parsing headers..."
-    hdrs <- either error pure . parseHeaders $ src
-    putInfo "Traversing dependencies"
-    void $ askOracles $ SearchIn (parent absFP) <$> hdrs
-    cmd_ "satysfi" fp
+  alternatives do
+    "_build/*.pdf" %> \out -> do
+      putInfo $ "Genearting: " <> out
+      relFP <- either (error . displayException) pure $ parseRelFile out
+      absFP <-
+        makeAbsolute
+          =<< either
+            (error . displayException)
+            pure
+            ( P.replaceExtension ".saty" $
+                parent (parent relFP) </> filename relFP
+            )
+      putInfo $ "Resolved: " <> fromAbsFile absFP
+      src <- readFileText' absFP
+      putInfo "Parsing headers..."
+      hdrs <- either error pure . parseHeaders $ src
+      putInfo "Traversing dependencies"
+      void $ askOracles =<< mapM (resolveCmd (parent absFP)) hdrs
+      cmd_ "satysfi" "-o" out (fromAbsFile absFP)
+    "//*.pdf" %> \out -> do
+      putInfo $ "Genearting: " <> out
+      let fp = out Shake.-<.> ".saty"
+      absFP <- resolveFile' fp
+      putInfo $ "Resolved: " <> fromAbsFile absFP
+      src <- readFileText' absFP
+      putInfo "Parsing headers..."
+      hdrs <- either error pure . parseHeaders $ src
+      putInfo "Traversing dependencies"
+      void $ askOracles =<< mapM (resolveCmd $ parent absFP) hdrs
+      cmd_ "satysfi" fp
 
   void $ addOracle \case
-    SearchIn cwd (Require fp) -> do
-      putInfo $ "Requiring: " <> T.unpack fp.moduleName
-      pkg <- findPackage cwd fp.moduleName
+    Req fp -> do
+      putInfo $ "Requiring: " <> fromAbsFile fp
+      src <- readFileText' fp
+      hdrs <- either error pure . parseHeaders $ src
+      void $ askOracles =<< mapM (resolveCmd (parent fp)) hdrs
+    Imp pkg -> do
+      putInfo $ "Importing: " <> fromAbsFile pkg
       src <- readFileText' pkg
       hdrs <- either error pure . parseHeaders $ src
-      void $ askOracles $ SearchIn (parent pkg) <$> hdrs
-    SearchIn cwd (Import fp) -> do
-      putInfo $ "Importing: " <> T.unpack fp.moduleName
-      pkg <- findLocalPackage cwd fp.moduleName
-      src <- readFileText' pkg
-      hdrs <- either error pure . parseHeaders $ src
-      void $ askOracles $ SearchIn (parent pkg) <$> hdrs
+      void $ askOracles =<< mapM (resolveCmd (parent pkg)) hdrs
+
+resolveCmd :: Path Abs Dir -> HeaderDecl -> Action ModCmd
+resolveCmd d (Require m) = Req <$> findPackage d m.moduleName
+resolveCmd d (Import m) = Imp <$> findLocalPackage d m.moduleName
 
 findM :: (Monad m) => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
