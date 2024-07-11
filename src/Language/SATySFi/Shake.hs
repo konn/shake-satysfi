@@ -89,7 +89,11 @@ data ModCmd
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable, Binary)
 
-type instance RuleResult ModCmd = ()
+newtype Hash = Hash Int
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
+
+type instance RuleResult ModCmd = Hash
 
 readFileText' :: (HasCallStack) => Path r File -> Action T.Text
 readFileText' fp = do
@@ -135,11 +139,16 @@ satysfiRules = do
       src <- readFileText' fp
       hdrs <- either error pure . parseHeaders $ src
       void $ askOracles =<< mapM (resolveCmd (parent fp)) hdrs
+      pure $ hashIt src
     Imp pkg -> do
       putInfo $ "Importing: " <> fromAbsFile pkg
       src <- readFileText' pkg
       hdrs <- either error pure . parseHeaders $ src
       void $ askOracles =<< mapM (resolveCmd (parent pkg)) hdrs
+      pure $ hashIt src
+
+hashIt :: (Hashable a) => a -> Hash
+hashIt = Hash . hash
 
 resolveCmd :: Path Abs Dir -> HeaderDecl -> Action ModCmd
 resolveCmd d (Require m) = Req <$> findPackage d m.moduleName
