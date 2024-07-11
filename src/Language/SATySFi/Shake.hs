@@ -69,7 +69,7 @@ optionsP =
       pure Options {..}
 
 defaultMainWith :: (HasCallStack) => Options -> IO ()
-defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest} $ do
+defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest, shakeVersion = "0.1.1.0"} $ do
   satysfiRules
   let targets =
         opts.targets <&> \targ0 ->
