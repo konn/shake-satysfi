@@ -27,6 +27,7 @@ import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
+import Data.Version (showVersion)
 import Development.Shake
 import Development.Shake.Classes
 import Development.Shake.FilePath qualified as Shake
@@ -37,6 +38,7 @@ import Options.Applicative qualified as Opts
 import Path
 import Path qualified as P
 import Path.IO (getHomeDir, makeAbsolute, resolveFile')
+import Paths_shake_satysfi (version)
 
 data Options = Options
   { targets :: !(NonEmpty FilePath)
@@ -69,7 +71,7 @@ optionsP =
       pure Options {..}
 
 defaultMainWith :: (HasCallStack) => Options -> IO ()
-defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest, shakeVersion = "0.1.1.0"} $ do
+defaultMainWith opts = shakeArgs shakeOptions {shakeChange = ChangeDigest, shakeVersion = showVersion version} $ do
   satysfiRules
   let targets =
         opts.targets <&> \targ0 ->
