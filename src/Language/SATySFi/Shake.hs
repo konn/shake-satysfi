@@ -140,13 +140,13 @@ satysfiRules = do
       putInfo $ "Requiring: " <> fromAbsFile fp
       src <- readFileText' fp
       hdrs <- either error pure . parseHeaders $ src
-      hashes <- askOracles =<< mapM (resolveCmd (parent fp)) hdrs
+      hashes <- askOracles =<< traverse (resolveCmd (parent fp)) hdrs
       pure $ hashIt $ hashIt src : hashes
     Imp pkg -> do
       putInfo $ "Importing: " <> fromAbsFile pkg
       src <- readFileText' pkg
       hdrs <- either error pure . parseHeaders $ src
-      hashes <- askOracles =<< mapM (resolveCmd (parent pkg)) hdrs
+      hashes <- askOracles =<< traverse (resolveCmd (parent pkg)) hdrs
       pure $ hashIt $ hashIt src : hashes
 
 hashIt :: (Hashable a) => a -> Hash
